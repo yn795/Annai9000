@@ -1,0 +1,140 @@
+
+import tkinter as tk
+from tkinter import filedialog, messagebox
+import pandas as pd
+
+# ファイルを処理して条件に基づいてテキストを整形
+def process_file(file_path):
+    try:
+        df = pd.read_excel(file_path)
+
+        # フォーマットに基づいて処理
+        processed_lines = []
+        for _, row in df.iterrows():
+            # 条件分岐処理
+            if "遷移文言CK" in row.values or "遷移文言のみ" in row.values or "遷移文言のみCK" in row.values:
+                processed_lines.append(f"テロップ番号: {row['テロップ番号']}
+遷移文言: {row['遷移文言']}
+")
+            elif "タイトルCK" in row.values:
+                processed_lines.append(f"テロップ番号: {row['テロップ番号']}
+タイトル: {row['タイトル']}
+遷移文言: {row['遷移文言']}
+")
+            elif "タイトル＆遷移文言CK" in row.values:
+                processed_lines.append(f"テロップ番号: {row['テロップ番号']}
+タイトル: {row['タイトル']}
+遷移文言: {row['遷移文言']}
+")
+            elif "不要" in row.values:
+                processed_lines.append("タイトル名と出さないと記載あり")
+            elif "本" in row.values:
+                processed_lines.append(f"テロップ番号: {row['テロップ番号']}
+遷移文言: {row['遷移文言']}
+")
+            elif "仮" in row.values:
+                processed_lines.append(f"テロップ番号: {row['テロップ番号']}
+タイトル: {row['タイトル']}
+遷移文言: {row['遷移文言']}
+")
+            else:
+                processed_lines.append(f"テロップ番号: {row['テロップ番号']}
+タイトル: {row['タイトル']}
+遷移文言: {row['遷移文言']}
+")
+
+        return "\n".join(processed_lines)
+    except Exception as e:
+        messagebox.showerror("エラー", f"ファイルの処理中にエラーが発生しました:\n{e}")
+        return ""
+
+# ファイルアップロード機能
+def upload_file(window):
+    file_path = filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx")])
+    if file_path:
+        processed_text = process_file(file_path)
+        window.delete("1.0", tk.END)
+        window.insert(tk.END, processed_text)
+
+# クリップボードにコピー
+def copy_to_clipboard(window):
+    content = window.get("1.0", tk.END).strip()
+    window.clipboard_clear()
+    window.clipboard_append(content)
+    window.update()
+    messagebox.showinfo("コピー完了", "内容がクリップボードにコピーされました！")
+
+# 数字をGMフォーマットに整形
+def handle_number_entry(entry_box, display_area):
+    number = entry_box.get()
+    if number.isdigit():
+        display_area.delete("1.0", tk.END)
+        display_area.insert(tk.END, f"GM({number}) MWお願いします")
+    else:
+        messagebox.showwarning("入力エラー", "数字を入力してください！")
+
+# 各ウィンドウ作成
+def create_window(title, content="", button_text=None, upload_action=None, copy_action=None, custom_action=None):
+    win = tk.Toplevel()
+    win.title(title)
+
+    text_area = tk.Text(win, height=20, width=80, wrap="word")
+    text_area.pack(padx=10, pady=10, fill="both", expand=True)
+    text_area.insert("1.0", content)
+
+    frame = tk.Frame(win)
+    frame.pack(fill="x", pady=10)
+
+    if button_text and upload_action:
+        upload_button = tk.Button(frame, text=button_text, command=lambda: upload_action(text_area))
+        upload_button.pack(side="left", padx=5)
+
+    if copy_action:
+        copy_button = tk.Button(frame, text="コピー", command=lambda: copy_to_clipboard(text_area))
+        copy_button.pack(side="right", padx=5)
+
+    if custom_action:
+        entry_box = tk.Entry(frame, width=10)
+        entry_box.pack(side="left", padx=5)
+        custom_button = tk.Button(frame, text="実行", command=lambda: custom_action(entry_box, text_area))
+        custom_button.pack(side="left", padx=5)
+
+    return win
+
+# メイン処理
+def main():
+    root = tk.Tk()
+    root.title("テキストプロセッサ")
+
+    # Window 1: テロップ番号・タイトル・遷移文言
+    create_window(
+        title="ウィンドウ1: テロップ番号・タイトル・遷移文言",
+        content="ここに条件に基づいたテロップ番号、タイトル、遷移文言が表示されます。",
+        button_text="Excelアップロード",
+        upload_action=upload_file,
+        copy_action=copy_to_clipboard
+    )
+
+    # Window 2: 本日以下になります
+    create_window(
+        title="ウィンドウ2: 本日以下になります",
+        content="本日、以下になっています。\n\nMSトップ → あり\nMS番号 → あり\nWS01 → 待ち\nWS番号 → あり\nSJ「Ｊの追跡」→ なし\n報ステ→ あり",
+    )
+
+    # Window 3: 連絡事項
+    create_window(
+        title="ウィンドウ3: 連絡事項",
+        content="済はOKに置換\n山下は削除\n\n例: 進捗状況はOKに更新されました。",
+    )
+
+    # Window 4: GMとMW入力
+    create_window(
+        title="ウィンドウ4: GMとMW入力",
+        content="ここにGM() MWお願いしますと表示されます。",
+        custom_action=handle_number_entry
+    )
+
+    root.mainloop()
+
+if __name__ == "__main__":
+    main()
